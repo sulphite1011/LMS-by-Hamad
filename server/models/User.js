@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 const Schema = mongoose.Schema; 
 
-const userSchema = new Schema({  
+const userSchema = new mongoose.Schema({  
   _id: { type: String, required: true },
   name: { type: String, required: true },
   email: { type: String, required: true },
@@ -9,9 +9,9 @@ const userSchema = new Schema({
   enrolledCourses: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'course'  
+      ref: 'Course'  
     }
-  ]
+  ],
 }, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);
