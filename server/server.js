@@ -21,29 +21,22 @@ await connectCloudinary();
 //middleware
 app.use(cors());
 app.use(clerkMiddleware());
-app.use(express.json());  // ADDED THIS LINE - for general JSON parsing
 
 
 //sample route
-app.get('/', (req, res) => {
-  res.send('API is working...');
-}); 
 
-// im replacing express.json() with express.raw({ type: "application/json" })
 
-app.post(
-  "/clerk",
-  express.raw({ type: "application/json" }),
-  clerkWebhooks
-);
 
-app.use('/api/educator' , educatorRouter)  // REMOVED express.json() from here since it's already applied globally
+//routes
+app.get('/', (req, res) => {res.send('API is working hamad...');}); 
+app.post("/clerk", express.raw({ type: "application/json" }), clerkWebhooks);
+app.post("/stripe", express.raw({ type: "application/json" }), stripeWebhooks );
 
-app.use('/api/course' , courseRouter )
-app.use('/api/course' , courseRouter )
-app.use('/api/user' , userRouter )  
-app.post(
-  "/stripe", express.raw({ type: "application/json" }), stripeWebhooks );
+app.use('/api/educator' , express.json(),  educatorRouter) 
+app.use('/api/course' , express.json(),  courseRouter )
+app.use('/api/course' , express.json(),  courseRouter )
+app.use('/api/user' ,  express.json(), userRouter )  
+
 
 //set port
  const PORT = process.env.PORT || 5000;
