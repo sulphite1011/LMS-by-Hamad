@@ -25,24 +25,31 @@ app.use(clerkMiddleware());
 
 //sample route
 app.get('/', (req, res) => {
-  res.send('API is working...hamad');
+  res.send('API is working...stripe done : pending ---> compled');
 }); 
 
-// im replacing express.json() with express.raw({ type: "application/json" })
+
 
 app.post( 
   "/clerk",
   express.raw({ type: "application/json" }),
   clerkWebhooks
 );
+app.post(
+  "/stripe", express.raw({ type: "application/json" }), stripeWebhooks );
 
-app.use('/api/educator' , educatorRouter)  // REMOVED express.json() from here since it's already applied globally
+
+  //middleware
+app.use(express.json());
+
+
+
+
+app.use('/api/educator' , educatorRouter)  
 
 app.use('/api/course' , courseRouter )
 app.use('/api/course' , courseRouter )
 app.use('/api/user' , userRouter )  
-app.post(
-  "/stripe", express.raw({ type: "application/json" }), stripeWebhooks );
 
 //set port
  const PORT = process.env.PORT || 5000;
