@@ -25,7 +25,7 @@ app.use(clerkMiddleware());
 
 //sample route
 app.get('/', (req, res) => {
-  res.send('API is working...');
+  res.send('API is working...hamad');
 }); 
 
 // im replacing express.json() with express.raw({ type: "application/json" })
