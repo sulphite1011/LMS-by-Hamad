@@ -13,7 +13,7 @@ import Loading from '../../components/student/Loading';
 
 
 const Player = () => {
-  const { enrolledCourses, calculateChapterTime, backendUrl, userData, getToken, fetchAllCourses } = useContext(AppContext);
+  const { enrolledCourses, calculateChapterTime, backendUrl, userData, getToken, fetchAllCourses , fetchUserEnrolledCourses} = useContext(AppContext);
   const { courseId } = useParams();
   const [courseData, setCourseData] = useState(null);
   const [openSection, setOpenSection] = useState({});
