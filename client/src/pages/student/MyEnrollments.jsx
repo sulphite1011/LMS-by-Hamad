@@ -15,30 +15,38 @@ const MyEnrollments = () => {
       const token = await getToken();
       const tempProgressArray = await Promise.all(
         enrolledCourses.map(async (course) => {
-          const { data } = await axios.post(`${backendUrl}/api/user/
-    get-course-progress`, { courseId: course._id }, {
-            headers: {
-              Authorization:
-                `Beaver ${token}`
+          const { data } = await axios.post(
+            `${backendUrl}/api/user/get-course-progress`, // FIXED: Removed line break
+            { courseId: course._id }, 
+            {
+              headers: {
+                Authorization: `Bearer ${token}` // FIXED: "Bearer" not "Beaver"
+              }
             }
-          });
-          let totalloctures = calculateNoOfLectures(course);
-          const lectureCompleted = data.progressData ? data.progressData.
-            lectureCompleted.length : 0;
-          return { totalloctures, lectureCompleted }
+          );
+          
+          let totalLectures = calculateNoOfLectures(course);
+          const lectureCompleted = data.progressData ? data.progressData.lectureCompleted.length : 0;
+          
+          return { 
+            totalLectures, // FIXED: spelling
+            lectureCompleted // FIXED: spelling
+          }
         })
       )
       setProgressArray(tempProgressArray);
 
     } catch (error) {
-      toast.error(error.messege)
+      toast.error(error.message) // FIXED: "message" not "messege"
     }
   }
+
   useEffect(() => {
     if (userData) {
       fetchUserEnrolledCourses()
     }
   }, [userData])
+
   useEffect(() => {
     if (enrolledCourses.length > 0) {
       getCourseProgress()
@@ -48,7 +56,7 @@ const MyEnrollments = () => {
   return (
     <>
       <div className='md:px-36 px-8 pt-10'>
-        <h1 className='text-2x1 font-semibold'>My Enrollments</h1>
+        <h1 className='text-2xl font-semibold'>My Enrollments</h1>
         <table className='md:table-auto table-fixed w-full overflow-hidden border mt-10'>
           <thead className='text-gray-900 border-b border-gray-500/20 text-sm text-left max-sm:hidden'>
             <tr>
@@ -59,29 +67,54 @@ const MyEnrollments = () => {
             </tr>
           </thead>
           <tbody className='text-gray-700'>
-            {enrolledCourses.map((course, index) => (
-              <tr key={index} className='border-b border-gray-500/20'>
-                <td className='md:px-4 pl-2 md:pl-4 py-3 flex items-center space-x-3'>
-                  <img src={course.courseThumbnail} alt="" className='w-14 sm:w-24 md:w-28' />
-                  <div className='flex-1'>
-                    <p className='mb-1 max-sm:text-sm'>{course.courseTitle}</p>
-                    <Line strokeWidth={2} percent={progressArray[index] ? (progressArray[index].lectureCompleeted * 100) / progressArray[index].totalLectures : 0} className='bg-gray-300 rounded-full' />
-                  </div>
-                </td>
-                <td className='px-4 py-3 max-sm:hidden'>
-                  {calculateCourseDuration(course)}
-                </td>
-                <td className='px-4 py-3 max-sm:hidden'>
-                  {progressArray[index] && `${progressArray[index].
-                    lectureCompleeted}/${progressArray[index].totalLectures}`}
-                  <span>Lectures</span>
-                </td>
-                <td className='px-4 py-3 max-sm:text-right'>
-                  <button className='px-3 sm:px-5 py-1.5 sm:py-2 bg-blue-600 max-sm:text-xs text-white' onClick={() => navigate('/player/' + course._id)}>
-                    {progressArray[index] && progressArray[index].lectureCompleeted === progressArray[index].totalLectures ? 'Completed' : 'On Going'}</button>
-                </td>
-              </tr>
-            ))}
+            {enrolledCourses.map((course, index) => {
+              const progress = progressArray[index];
+              const percent = progress 
+                ? (progress.lectureCompleted * 100) / progress.totalLectures 
+                : 0;
+              
+              return (
+                <tr key={index} className='border-b border-gray-500/20'>
+                  <td className='md:px-4 pl-2 md:pl-4 py-3 flex items-center space-x-3'>
+                    <img src={course.courseThumbnail} alt="" className='w-14 sm:w-24 md:w-28' />
+                    <div className='flex-1'>
+                      <p className='mb-1 max-sm:text-sm'>{course.courseTitle}</p>
+                      <Line 
+                        strokeWidth={2} 
+                        percent={percent} 
+                        strokeColor="#3B82F6" // Blue color
+                        trailColor="#E5E7EB" // Gray trail
+                        className='rounded-full' 
+                      />
+                      <p className='text-xs text-gray-500 mt-1'>
+                        {Math.round(percent)}% complete
+                      </p>
+                    </div>
+                  </td>
+                  <td className='px-4 py-3 max-sm:hidden'>
+                    {calculateCourseDuration(course)}
+                  </td>
+                  <td className='px-4 py-3 max-sm:hidden'>
+                    {progress && `${progress.lectureCompleted}/${progress.totalLectures}`}
+                    <span className='text-gray-500 text-sm'> lectures</span>
+                  </td>
+                  <td className='px-4 py-3 max-sm:text-right'>
+                    <button 
+                      className={`px-3 sm:px-5 py-1.5 sm:py-2 max-sm:text-xs text-white rounded ${
+                        progress && progress.lectureCompleted === progress.totalLectures 
+                          ? 'bg-green-600' 
+                          : 'bg-blue-600'
+                      }`} 
+                      onClick={() => navigate('/player/' + course._id)}
+                    >
+                      {progress && progress.lectureCompleted === progress.totalLectures 
+                        ? 'Completed' 
+                        : 'Continue Learning'}
+                    </button>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
@@ -91,3 +124,6 @@ const MyEnrollments = () => {
 }
 
 export default MyEnrollments
+
+
+

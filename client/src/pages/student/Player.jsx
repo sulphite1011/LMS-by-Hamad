@@ -52,6 +52,7 @@ const Player = () => {
 
   const markLectureAsCompleted = async (lectureId) => {
     try {
+      console.log("Marking lecture as completed:", lectureId); // Add this
       const token = await getToken()
       const { data } = await axios.post(backendUrl + '/api/user/update-course-progress', { courseId, lectureId }, { headers: { Authorization: `Bearer ${token}` } })
       if (data.success) {
@@ -62,6 +63,7 @@ const Player = () => {
       }
     } catch (error) {
       toast.error(error.message)
+      console.error("Error marking lecture:", error); // Add this
     }
   }
 
@@ -69,7 +71,7 @@ const Player = () => {
     try {
       const token = await getToken()
       const { data } = await axios.post(backendUrl + '/api/user/get-course-progress', { courseId }, { headers: { Authorization: `Bearer ${token}` } })
-
+ console.log("Backend response:", data); // Add this
       if (data.success) {
         setProgressData(data.progressData)
       } else {
@@ -84,7 +86,7 @@ const Player = () => {
     try {
       const token = await getToken()
       const { data } = await axios.post(backendUrl + '/api/user/add-rating', { courseId, rating }, { headers: { Authorization: `Bearer ${token}` } })
-
+ console.log("Backend response:", data); // Add this
       if (data.success) {
         toast.success(data.message)
         fetchUserEnrolledCourses()
@@ -124,7 +126,7 @@ const Player = () => {
                   <ul className='list-disc md:pl-10 pl-4 pr-4 py-2 text-gray-600 border-t border-gray-300'>
                     {chapter.chapterContent.map((lecture, i) => (
                       <li key={i} className='flex items-start gap-2 py-1'>
-                        <img src={progressData && progressData.lectureCompleted.include(lecture.lectureId) ? assets.blue_tick_icon : assets.play_icon} alt="play icon" className='w-4 h-4 mt-1' />
+                        <img src={progressData && progressData.lectureCompleted.includes(lecture.lectureId) ? assets.blue_tick_icon : assets.play_icon} alt="play icon" className='w-4 h-4 mt-1' />
                         <div className='flex items-center justify-between w-full text-gray-800 text-xs md:text-default'>
                           <p>{lecture.lectureTitle}</p>
                           <div className='flex gap-2'>
@@ -161,7 +163,7 @@ const Player = () => {
                     {playerData.chapter}.{playerData.lecture} {playerData.lectureTitle}
                   </p>
                   <button onClick={()=>markLectureAsCompleted(playerData.lectureId)} className='text-blue-600'>
-                    {progressData && progressData.lectureCompleted.include(playerData.lectureId) ? 'Completed' : 'Mark Complete'}
+                    {progressData && progressData.lectureCompleted?.includes(playerData.lectureId) ? 'Completed' : 'Mark Complete'}
                   </button>
                 </div>
               </div>
