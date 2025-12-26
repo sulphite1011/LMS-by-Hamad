@@ -20,24 +20,6 @@ export const AppContextProvider = (props) => {
   const { getToken } = useAuth();
   const { user } = useUser();
 
-  // fetch all courses
-  // const fetchAllCourses = async () => {
-  //   try {
-  //    const {data} = await axios.get(backendUrl + '/api/course/all');
-  //    if(data.success){
-  //     setAllCourses(data.courses)
-  //    }else{
-  //     toast.error(data.messege)
-
-  //    }
-  //   } catch (error) {
-  //      toast.error(error.messege)
-  //   }
-  // }
-
-
-
-
 
 
   // Function to calculate average rating of course
@@ -46,7 +28,7 @@ export const AppContextProvider = (props) => {
   // fetch all courses
   const fetchAllCourses = async () => {
     try {
-      const { data } = await axios.get(`${backendUrl}/api/course/all`);
+      const { data } = await axios.get(backendUrl + '/api/course/all');
       console.log("API response:", data);
       if (data.success) {
         setAllCourses(data.courses);
