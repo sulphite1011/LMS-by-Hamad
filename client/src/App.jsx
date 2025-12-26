@@ -11,7 +11,7 @@ import Loading from './components/student/Loading'
 
 
 import Educator from './pages/educator/Educator'
-import Dashboard from './pages/educator/Dashboard'
+import Dashboard from './pages/educator/DashBoard'
 import AddCourse from './pages/educator/AddCourse'
 import MyCourses from './pages/educator/MyCourses'
 import StudentsEnrolled from './pages/educator/StudentsEnrolled'
