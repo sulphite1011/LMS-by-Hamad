@@ -28,7 +28,7 @@ const Player = () => {
         setCourseData(course);
         course.courseRatings.map((item) => {
           if (item.userId === userData._id) {
-            setInitialRating(item.Rating)
+            setInitialRating(item.rating)
           }
         })
       }
