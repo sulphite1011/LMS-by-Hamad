@@ -54,3 +54,6 @@ const App = () => {
 }
 
 export default App
+
+
+// app completed by video now its up to me
