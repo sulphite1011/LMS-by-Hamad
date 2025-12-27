@@ -1,15 +1,17 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import uniqid from 'uniqid'
+import { nanoid } from 'nanoid' // Replace uniqid with nanoid
 import Quill from 'quill'
 import { assets } from '../../assets/assets';
 import { AppContext } from '../../context/AppContext';
 import { toast } from 'react-toastify';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom'; // Add navigation
 
 
 const AddCourse = () => {
   const quillRef = useRef(null);
   const editorRef = useRef(null);
+  const navigate = useNavigate(); // Initialize navigation
 
   const { backendUrl, getToken } = useContext(AppContext)
 
@@ -24,7 +26,7 @@ const AddCourse = () => {
     {
       lectureTitle: '',
       lectureDuration: '',
-      lectureURL: '',
+      lectureUrl: '', // Fixed typo: lectureURL to lectureUrl
       isPreviewFree: false,
     }
   );
@@ -36,7 +38,7 @@ const AddCourse = () => {
       const title = prompt('Enter Chapter Name:');
       if (title) {
         const newChapter = {
-          chapterId: uniqid(),
+          chapterId: nanoid(), // Use nanoid instead of uniqid
           chapterTitle: title,
           chapterContent: [],
           collapsed: false,
@@ -89,7 +91,7 @@ const AddCourse = () => {
           const newLecture = {
             ...lectureDetails,
             lectureOrder: chapter.chapterContent.length > 0 ? chapter.chapterContent.slice(-1)[0].lectureOrder + 1 : 1,
-            lectureId: uniqid()
+            lectureId: nanoid() // Use nanoid instead of uniqid
           };
           chapter.chapterContent.push(newLecture);
         }
@@ -110,53 +112,75 @@ const AddCourse = () => {
 
 
 
-  const handleSubmit = async (e) => {
-    try {
-      e.preventDefault()
-      if (!image) {
-        toast.error('Thumbnail Not Selected')
-        return; // Add return to stop execution by deepseek
-      }
-
-      const courseData = {
-        courseTitle,
-        courseDescription: quillRef.current.root.innerHTML,
-        coursePrice: Number(coursePrice),
-        discount: Number(discount),
-        courseContent: chapters,
-      }
-
-      const formData = new FormData()
-      formData.append('courseData', JSON.stringify(courseData))
-      formData.append('image', image)
-
-      const token = await getToken()
-      const { data } = await axios.post(backendUrl + '/api/educator/add-course',
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      )
-
-      if (data.success) {
-        toast.success(data.message)
-        setCourseTitle('')
-        setCoursePrice(0)
-        setDiscount(0)
-        setImage(null)
-        setChapters([])
-        quillRef.current.root.innerHTML = ""
-      } else {
-        toast.error(data.message)
-      }
-
-    } catch (error) {
-      toast.error(error.message)
+const handleSubmit = async (e) => {
+  try {
+    e.preventDefault();
+    
+    if (!image) {
+      toast.error('Thumbnail Not Selected');
+      return;
     }
-  };
 
+    if (chapters.length === 0) {
+      toast.error('Please add at least one chapter');
+      return;
+    }
+
+    // Validate all chapters have lectures
+    for (const chapter of chapters) {
+      if (chapter.chapterContent.length === 0) {
+        toast.error(`Chapter "${chapter.chapterTitle}" has no lectures`);
+        return;
+      }
+    }
+
+    const courseData = {
+      courseTitle,
+      courseDescription: quillRef.current.root.innerHTML,
+      coursePrice: Number(coursePrice),
+      discount: Number(discount),
+      courseContent: chapters,
+      isPublished: true // Default to published
+    };
+
+    const formData = new FormData();
+    formData.append('courseData', JSON.stringify(courseData));
+    formData.append('image', image);
+
+    const token = await getToken();
+    const { data } = await axios.post(`${backendUrl}/api/educator/add-course`,
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    );
+
+    if (data.success) {
+      toast.success('Course added successfully!');
+      // Reset form
+      setCourseTitle('');
+      setCoursePrice(0);
+      setDiscount(0);
+      setImage(null);
+      setChapters([]);
+      quillRef.current.root.innerHTML = '';
+      
+      // Redirect to manage courses page
+      setTimeout(() => {
+        navigate('/educator/my-courses'); // Changed to my-courses
+      }, 1500);
+    } else {
+      toast.error(data.message);
+    }
+
+  } catch (error) {
+    console.error('Error adding course:', error);
+    toast.error(error.response?.data?.message || error.message || 'Failed to add course');
+  }
+};
 
 
 

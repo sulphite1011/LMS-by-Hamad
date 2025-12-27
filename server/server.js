@@ -60,3 +60,26 @@ app.listen(PORT, () => {
 }); 
 
 // app completed by video now its up to me
+
+
+
+
+  
+  // Log all registered routes
+  console.log('\n=== REGISTERED ROUTES ===');
+  app._router.stack.forEach((middleware) => {
+    if (middleware.route) {
+      // Routes registered directly on the app
+      const methods = Object.keys(middleware.route.methods);
+      console.log(`${methods.join(', ').toUpperCase()} ${middleware.route.path}`);
+    } else if (middleware.name === 'router') {
+      // Routes registered as router
+      middleware.handle.stack.forEach((handler) => {
+        if (handler.route) {
+          const methods = Object.keys(handler.route.methods);
+          console.log(`${methods.join(', ').toUpperCase()} /api/educator${handler.route.path}`);
+        }
+      });
+    }
+  });
+  console.log('=== END ROUTES ===\n');

@@ -1,56 +1,49 @@
-// // Middleware ( Protect Educator Routes )
-// export const protectEducator = async (req, res, next) => {  
-//   try {  
-//     const userId = req.auth.userId;
-    
-//     if (!userId) {
-//       return res.status(401).json({
-//         success: false, 
-//         message: 'Unauthorized: No user ID' 
-//       });
-//     }
-    
-//     console.log("protectEducator checking user:", userId);
-//     const response = await clerkClient.users.getUser(userId);
-    
-//     console.log("User metadata:", response.publicMetadata);
-    
-//     if (response.publicMetadata.role !== 'educator') {  
-//       return res.status(403).json({
-//         success: false, 
-//         message: 'Unauthorized Access: Not an educator' 
-//       });
-//     }  
-    
-//     next();  // ✅ This should be here
-//   } catch (error) {  
-//     console.error("protectEducator error:", error);
-//     res.status(500).json({
-//       success: false, 
-//       message: error.message 
-//     });  
-//   }
-// }
-
-
-
-
-
-
 import express from 'express'
-import {addCourse, educatorDashboardData, getEducatorCourses, getEnrolledStudentsData, updateRoleToEducator} from '../controllers/educatorController.js'
-import upload from '../configs/multer.js';
-import { protectEducator } from '../middlewares/authMiddleware.js';
+import {
+  addCourse, 
+  educatorDashboardData, 
+  getEducatorCourses, 
+  getEnrolledStudentsData, 
+  updateRoleToEducator,
+  getSingleCourse,
+  updateCourse,
+  deleteCourse,
+  toggleCoursePublish,
+  getCourseAnalytics,
+  // MAKE SURE THESE ARE IMPORTED
+  addChapter,
+  deleteChapter,
+  updateChapter,
+  addLecture,
+  updateLecture,
+  deleteLecture
+} from '../controllers/educatorController.js'
+import upload from '../configs/multer.js'
+import { protectEducator } from '../middlewares/authMiddleware.js'
 
 const educatorRouter = express.Router()
 
-
-//add educator role 
+// Existing routes
 educatorRouter.get('/update-role' , updateRoleToEducator);
 educatorRouter.post('/add-course' , upload.single('image') , protectEducator , addCourse);
 educatorRouter.get('/courses' , protectEducator , getEducatorCourses);
 educatorRouter.get('/dashboard' , protectEducator , educatorDashboardData);
 educatorRouter.get('/enrolled-students' , protectEducator , getEnrolledStudentsData);
 
+// Course CRUD routes
+educatorRouter.get('/course/:courseId', protectEducator, getSingleCourse)
+educatorRouter.put('/course/:courseId', upload.single('image'), protectEducator, updateCourse)
+educatorRouter.delete('/course/:courseId', protectEducator, deleteCourse)
+educatorRouter.patch('/course/:courseId/publish', protectEducator, toggleCoursePublish)
+educatorRouter.get('/course/:courseId/analytics', protectEducator, getCourseAnalytics)
+
+// ✅ ADD THESE ROUTES FOR CHAPTER AND LECTURE MANAGEMENT
+educatorRouter.post('/course/:courseId/chapters', protectEducator, addChapter)
+educatorRouter.put('/course/:courseId/chapters/:chapterId', protectEducator, updateChapter)
+educatorRouter.delete('/course/:courseId/chapters/:chapterId', protectEducator, deleteChapter)
+
+educatorRouter.post('/course/:courseId/chapters/:chapterId/lectures', protectEducator, addLecture)
+educatorRouter.put('/course/:courseId/chapters/:chapterId/lectures/:lectureId', protectEducator, updateLecture)
+educatorRouter.delete('/course/:courseId/chapters/:chapterId/lectures/:lectureId', protectEducator, deleteLecture)
 
 export default educatorRouter
