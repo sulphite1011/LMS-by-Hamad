@@ -38,7 +38,8 @@ const CourseDetails = () => {
         toast.error(data.message);
       }
     } catch (error) {
-      toast.error(error.message);
+      console.error('Error fetching course:', error);
+      toast.error('Failed to load course details');
     }
   };
 
@@ -110,13 +111,17 @@ const CourseDetails = () => {
           
           {/* Course Title */}
           <h1 className='text-2xl md:text-3xl lg:text-4xl font-bold text-gray-800'>
-            {courseData.courseTitle}
+            {courseData.courseTitle || 'Untitled Course'}
           </h1>
           
           {/* Course Description Preview */}
           <p 
             className='pt-4 md:text-base text-sm' 
-            dangerouslySetInnerHTML={{ __html: courseData.courseDescription.slice(0, 200) }}
+            dangerouslySetInnerHTML={{ 
+              __html: courseData.courseDescription 
+                ? courseData.courseDescription.slice(0, 200) 
+                : 'No description available.' 
+            }}
           ></p>
 
           {/* Ratings & Info */}
@@ -133,23 +138,25 @@ const CourseDetails = () => {
               ))}
             </div>
             <p className='text-blue-600'>
-              ({courseData.courseRatings.length} {courseData.courseRatings.length > 1 ? 'ratings' : 'rating'})
+              ({courseData.courseRatings?.length || 0} {courseData.courseRatings?.length === 1 ? 'rating' : 'ratings'})
             </p>
             <p>
-              {courseData.enrolledStudents.length} {courseData.enrolledStudents.length > 1 ? 'students' : 'student'}
+              {courseData.enrolledStudents?.length || 0} {courseData.enrolledStudents?.length === 1 ? 'student' : 'students'}
             </p>
           </div>
           
-          {/* Educator Info */}
+          {/* Educator Info - ADD SAFE CHECK HERE */}
           <p className='text-sm'>
-            Course by <span className='text-blue-600 underline'>{courseData.educator.name}</span>
+            Course by <span className='text-blue-600 underline'>
+              {courseData.educator?.name || 'Unknown Educator'}
+            </span>
           </p>
 
           {/* Course Structure */}
           <div className='pt-8 text-gray-800'>
             <h2 className='text-xl font-semibold'>Course Structure</h2>
             <div className='pt-5'>
-              {courseData.courseContent.map((chapter, index) => (
+              {courseData.courseContent?.map((chapter, index) => (
                 <div key={index} className='border border-gray-300 bg-white mb-2 rounded-lg'>
                   {/* Chapter Header */}
                   <div 
@@ -162,21 +169,21 @@ const CourseDetails = () => {
                         src={assets.down_arrow_icon} 
                         alt="toggle chapter" 
                       />
-                      <p className='font-medium md:text-base text-sm'>{chapter.chapterTitle}</p>
+                      <p className='font-medium md:text-base text-sm'>{chapter.chapterTitle || `Chapter ${index + 1}`}</p>
                     </div>
                     <p className='text-sm md:text-default'>
-                      {chapter.chapterContent.length} lectures - {calculateChapterTime(chapter)}
+                      {chapter.chapterContent?.length || 0} lectures - {calculateChapterTime(chapter)}
                     </p>
                   </div>
 
                   {/* Chapter Content (Collapsible) */}
                   <div className={`overflow-hidden transition-all duration-300 ${openSection[index] ? 'max-h-96' : 'max-h-0'}`}>
                     <ul className='list-disc md:pl-10 pl-4 pr-4 py-2 text-gray-600 border-t border-gray-300'>
-                      {chapter.chapterContent.map((lecture, i) => (
+                      {chapter.chapterContent?.map((lecture, i) => (
                         <li key={i} className='flex items-start gap-2 py-1'>
                           <img src={assets.play_icon} alt="play" className='w-4 h-4 mt-1' />
                           <div className='flex items-center justify-between w-full text-gray-800 text-xs md:text-default'>
-                            <p>{lecture.lectureTitle}</p>
+                            <p>{lecture.lectureTitle || `Lecture ${i + 1}`}</p>
                             <div className='flex gap-2'>
                               {lecture.isPreviewFree && (
                                 <p
@@ -189,7 +196,7 @@ const CourseDetails = () => {
                                   Preview
                                 </p>
                               )}
-                              <p>{humanizeDuration(lecture.lectureDuration * 60 * 1000, { units: ['h', 'm'] })}</p>
+                              <p>{humanizeDuration((lecture.lectureDuration || 0) * 60 * 1000, { units: ['h', 'm'] })}</p>
                             </div>
                           </div>
                         </li>
@@ -206,25 +213,28 @@ const CourseDetails = () => {
             <h3 className='text-xl font-semibold text-gray-800'>Course Description</h3>
             <p 
               className='pt-3 rich-text' 
-              dangerouslySetInnerHTML={{ __html: courseData.courseDescription }}
+              dangerouslySetInnerHTML={{ 
+                __html: courseData.courseDescription || 'No description available.' 
+              }}
             ></p>
           </div>
 
         </div>
 
         {/* ========== RIGHT COLUMN - Thumbnail & Enrollment Card ========== */}
-        {/* FIXED: Made fully responsive with proper thumbnail sizing */}
         <div className='w-full lg:w-96 lg:sticky lg:top-24 z-10'>
           <div className='w-full bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200'>
             
-            {/* Thumbnail/Video Player - FIXED RESPONSIVENESS */}
+            {/* Thumbnail/Video Player */}
             <div className='w-full aspect-video overflow-hidden bg-gray-100'>
               {playerData ? (
                 <YouTube
                   videoId={playerData.videoId}
                   opts={{
                     playerVars: {
-                      autoplay: 1
+                      // REMOVE autoplay if you don't want autoplay
+                      modestbranding: 1,
+                      rel: 0,
                     }
                   }}
                   iframeClassName='w-full h-full'
@@ -236,11 +246,10 @@ const CourseDetails = () => {
                 />
               ) : (
                 <img 
-                  src={courseData.courseThumbnail} 
-                  alt={courseData.courseTitle}
+                  src={courseData.courseThumbnail || 'https://via.placeholder.com/800x450?text=Course+Thumbnail'} 
+                  alt={courseData.courseTitle || 'Course'}
                   className='w-full h-full object-cover'
                   onError={(e) => {
-                    // Fallback if image fails to load
                     e.target.src = 'https://via.placeholder.com/800x450?text=Course+Thumbnail';
                     e.target.className = 'w-full h-full object-contain bg-gray-200 p-4';
                   }}
@@ -261,12 +270,12 @@ const CourseDetails = () => {
               {/* Pricing */}
               <div className='flex flex-wrap gap-3 items-center pt-2'>
                 <p className='text-gray-800 text-2xl lg:text-3xl font-bold'>
-                  {currency}{(courseData.coursePrice - courseData.discount * courseData.coursePrice / 100).toFixed(2)}
+                  {currency}{(courseData.coursePrice - (courseData.discount || 0) * courseData.coursePrice / 100).toFixed(2)}
                 </p>
                 <p className='text-lg text-gray-500 line-through'>
-                  {currency}{courseData.coursePrice}
+                  {currency}{courseData.coursePrice || 0}
                 </p>
-                <p className='text-lg text-gray-500'>{courseData.discount}% off</p>
+                <p className='text-lg text-gray-500'>{courseData.discount || 0}% off</p>
               </div>
 
               {/* Course Stats */}

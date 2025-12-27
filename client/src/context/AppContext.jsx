@@ -28,6 +28,8 @@ export const AppContextProvider = (props) => {
 
   // Function to calculate average rating of course
   const calculateRating = (course) => {
+    // ADDED NULL CHECK
+    if (!course) return 0;
     if (!course.courseRatings || course.courseRatings.length === 0) {
       return 0;
     }
@@ -40,19 +42,21 @@ export const AppContextProvider = (props) => {
 
   // Function to Calculate Course Chapter Time
   const calculateChapterTime = (chapter) => {
-    if (!chapter.chapterContent) return "0 min";
+    // ADDED NULL CHECK
+    if (!chapter || !chapter.chapterContent) return "0 min";
     let time = 0
-    chapter.chapterContent.forEach((lecture) => time += lecture.lectureDuration)
+    chapter.chapterContent.forEach((lecture) => time += lecture.lectureDuration || 0)
     return humanizeDuration(time * 60 * 1000, { units: ["h", "m"] })
   }
 
   // Function to Calculate Course Duration
   const calculateCourseDuration = (course) => {
-    if (!course.courseContent) return "0 min";
+    // ADDED NULL CHECK
+    if (!course || !course.courseContent) return "0 min";
     let time = 0
     course.courseContent.forEach((chapter) => 
-      chapter.chapterContent.forEach(
-        (lecture) => time += lecture.lectureDuration
+      chapter.chapterContent?.forEach(
+        (lecture) => time += lecture.lectureDuration || 0
       )
     )
     return humanizeDuration(time * 60 * 1000, { units: ["h", "m"] })
@@ -60,7 +64,8 @@ export const AppContextProvider = (props) => {
 
   // Function calculate to No of Lectures in the course
   const calculateNoOfLectures = (course) => {
-    if (!course.courseContent) return 0;
+    // ADDED NULL CHECK
+    if (!course || !course.courseContent) return 0;
     let totalLectures = 0;
     course.courseContent.forEach(chapter => {
       if (Array.isArray(chapter.chapterContent)) {
@@ -76,14 +81,30 @@ export const AppContextProvider = (props) => {
       setLoading(prev => ({...prev, courses: true}));
       const { data } = await axios.get(backendUrl + '/api/course/all');
       if (data.success) {
-        setAllCourses(data.courses);
+        // ADDED SAFE MAPPING
+        const safeCourses = data.courses?.map(course => ({
+          ...course,
+          educator: course.educator || { name: 'Unknown Educator', _id: 'unknown' },
+          courseRatings: course.courseRatings || [],
+          enrolledStudents: course.enrolledStudents || [],
+          courseContent: course.courseContent || [],
+          coursePrice: course.coursePrice || 0,
+          discount: course.discount || 0,
+          courseTitle: course.courseTitle || 'Untitled Course',
+          courseDescription: course.courseDescription || '',
+          courseThumbnail: course.courseThumbnail || 'https://via.placeholder.com/300x200?text=No+Image'
+        })) || [];
+        setAllCourses(safeCourses);
       } else {
         toast.error(data.message || "Failed to fetch courses");
+        setAllCourses([]);
       }
     } catch (error) {
+      console.error('Error fetching courses:', error);
       toast.error(
         error.response?.data?.message || error.message || "Server error"
       );
+      setAllCourses([]);
     } finally {
       setLoading(prev => ({...prev, courses: false}));
     }
@@ -93,7 +114,10 @@ export const AppContextProvider = (props) => {
   const fetchUserData = async () => {
     try {
       setLoading(prev => ({...prev, user: true}));
-      if (!user) return;
+      if (!user) {
+        setUserData(null);
+        return;
+      }
       
       // Check if user is educator
       if (user.publicMetadata?.role === 'educator') {
@@ -101,17 +125,40 @@ export const AppContextProvider = (props) => {
       }
       
       const token = await getToken();
+      if (!token) {
+        setUserData(null);
+        return;
+      }
+      
       const { data } = await axios.get(backendUrl + '/api/user/data', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       if (data.success) {
-        setUserData(data.user);
+        // ADDED SAFE USER DATA
+        setUserData({
+          ...data.user,
+          enrolledCourses: data.user.enrolledCourses || [],
+          name: data.user.name || user.fullName || 'User',
+          email: data.user.email || user.primaryEmailAddress?.emailAddress || ''
+        });
       } else {
         toast.error(data.message);
+        setUserData({
+          _id: user.id,
+          name: user.fullName || 'User',
+          email: user.primaryEmailAddress?.emailAddress || '',
+          enrolledCourses: []
+        });
       }
     } catch (error) {
-      toast.error(error.message);
+      console.error('Error fetching user data:', error);
+      setUserData({
+        _id: user?.id || 'guest',
+        name: user?.fullName || 'Guest User',
+        email: user?.primaryEmailAddress?.emailAddress || '',
+        enrolledCourses: []
+      });
     } finally {
       setLoading(prev => ({...prev, user: false}));
     }
@@ -120,37 +167,77 @@ export const AppContextProvider = (props) => {
   // Fetch User enrolled courses 
   const fetchUserEnrolledCourses = async () => {
     try {
+      if (!user) {
+        setEnrolledCourses([]);
+        return;
+      }
+      
       const token = await getToken();
+      if (!token) {
+        setEnrolledCourses([]);
+        return;
+      }
+      
       const { data } = await axios.get(backendUrl + '/api/user/enrolled-courses', {
         headers: { Authorization: `Bearer ${token}` }
       })
       if (data.success) {
-        setEnrolledCourses(data.enrolledCourses.reverse())
+        // ADDED SAFE MAPPING
+        const safeCourses = data.enrolledCourses?.map(course => ({
+          ...course,
+          educator: course.educator || { name: 'Unknown Educator' },
+          courseRatings: course.courseRatings || [],
+          courseContent: course.courseContent || []
+        })).reverse() || [];
+        setEnrolledCourses(safeCourses);
       } else {
         toast.error(data.message);
+        setEnrolledCourses([]);
       }
     } catch (error) {
+      console.error('Error fetching enrolled courses:', error);
       toast.error(error.message);
+      setEnrolledCourses([]);
     }
   }
 
   // Fetch Educator Courses
   const fetchEducatorCourses = async () => {
     try {
+      if (!user) {
+        setEducatorCourses([]);
+        return [];
+      }
+      
       const token = await getToken();
+      if (!token) {
+        setEducatorCourses([]);
+        return [];
+      }
+      
       const { data } = await axios.get(backendUrl + '/api/educator/courses', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       if (data.success) {
-        setEducatorCourses(data.courses);
-        return data.courses;
+        const safeCourses = data.courses?.map(course => ({
+          ...course,
+          educator: course.educator || { name: 'Unknown Educator' },
+          courseRatings: course.courseRatings || [],
+          enrolledStudents: course.enrolledStudents || [],
+          courseContent: course.courseContent || []
+        })) || [];
+        setEducatorCourses(safeCourses);
+        return safeCourses;
       } else {
         toast.error(data.message);
+        setEducatorCourses([]);
         return [];
       }
     } catch (error) {
+      console.error('Error fetching educator courses:', error);
       toast.error(error.message);
+      setEducatorCourses([]);
       return [];
     }
   };
@@ -158,8 +245,18 @@ export const AppContextProvider = (props) => {
   // Fetch Educator Dashboard Data
   const fetchEducatorDashboard = async () => {
     try {
+      if (!user || !isEducator) {
+        setDashboardData(null);
+        return;
+      }
+      
       setLoading(prev => ({...prev, dashboard: true}));
       const token = await getToken();
+      if (!token) {
+        setDashboardData(null);
+        return;
+      }
+      
       const { data } = await axios.get(backendUrl + '/api/educator/dashboard', {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -168,9 +265,12 @@ export const AppContextProvider = (props) => {
         setDashboardData(data.dashboardData);
       } else {
         toast.error(data.message);
+        setDashboardData(null);
       }
     } catch (error) {
+      console.error('Error fetching dashboard:', error);
       toast.error(error.message);
+      setDashboardData(null);
     } finally {
       setLoading(prev => ({...prev, dashboard: false}));
     }
@@ -179,7 +279,17 @@ export const AppContextProvider = (props) => {
   // Update educator role
   const updateToEducator = async () => {
     try {
+      if (!user) {
+        toast.error('User not logged in');
+        return { success: false, message: 'User not logged in' };
+      }
+      
       const token = await getToken();
+      if (!token) {
+        toast.error('Authentication token missing');
+        return { success: false, message: 'Authentication token missing' };
+      }
+      
       const { data } = await axios.get(backendUrl + '/api/educator/update-role', {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -193,6 +303,7 @@ export const AppContextProvider = (props) => {
         return { success: false, message: data.message };
       }
     } catch (error) {
+      console.error('Error updating to educator:', error);
       toast.error(error.message);
       return { success: false, message: error.message };
     }
@@ -201,11 +312,21 @@ export const AppContextProvider = (props) => {
   // CRUD Operations for Courses
   const addCourse = async (courseData, thumbnailFile) => {
     try {
+      if (!user) {
+        toast.error('User not logged in');
+        return { success: false, message: 'User not logged in' };
+      }
+      
       const formData = new FormData();
       formData.append('courseData', JSON.stringify(courseData));
       formData.append('image', thumbnailFile);
 
       const token = await getToken();
+      if (!token) {
+        toast.error('Authentication token missing');
+        return { success: false, message: 'Authentication token missing' };
+      }
+      
       const { data } = await axios.post(backendUrl + '/api/educator/add-course', formData, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -223,6 +344,7 @@ export const AppContextProvider = (props) => {
         return { success: false, message: data.message };
       }
     } catch (error) {
+      console.error('Error adding course:', error);
       toast.error(error.response?.data?.message || error.message || 'Failed to add course');
       return { success: false, message: error.message };
     }
@@ -230,7 +352,17 @@ export const AppContextProvider = (props) => {
 
   const deleteCourse = async (courseId) => {
     try {
+      if (!user) {
+        toast.error('User not logged in');
+        return { success: false, message: 'User not logged in' };
+      }
+      
       const token = await getToken();
+      if (!token) {
+        toast.error('Authentication token missing');
+        return { success: false, message: 'Authentication token missing' };
+      }
+      
       const { data } = await axios.delete(backendUrl + `/api/educator/course/${courseId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -245,6 +377,7 @@ export const AppContextProvider = (props) => {
         return { success: false, message: data.message };
       }
     } catch (error) {
+      console.error('Error deleting course:', error);
       toast.error(error.response?.data?.message || error.message || 'Failed to delete course');
       return { success: false, message: error.message };
     }
@@ -252,7 +385,17 @@ export const AppContextProvider = (props) => {
 
   const togglePublishCourse = async (courseId, isPublished) => {
     try {
+      if (!user) {
+        toast.error('User not logged in');
+        return { success: false, message: 'User not logged in' };
+      }
+      
       const token = await getToken();
+      if (!token) {
+        toast.error('Authentication token missing');
+        return { success: false, message: 'Authentication token missing' };
+      }
+      
       const { data } = await axios.patch(backendUrl + `/api/educator/course/${courseId}/publish`, 
         { isPublished },
         { headers: { Authorization: `Bearer ${token}` } }
@@ -268,6 +411,7 @@ export const AppContextProvider = (props) => {
         return { success: false, message: data.message };
       }
     } catch (error) {
+      console.error('Error toggling publish course:', error);
       toast.error(error.response?.data?.message || error.message || 'Failed to update course');
       return { success: false, message: error.message };
     }
@@ -276,7 +420,17 @@ export const AppContextProvider = (props) => {
   // Get single course for editing
   const getCourseForEditing = async (courseId) => {
     try {
+      if (!user) {
+        toast.error('User not logged in');
+        return { success: false, message: 'User not logged in' };
+      }
+      
       const token = await getToken();
+      if (!token) {
+        toast.error('Authentication token missing');
+        return { success: false, message: 'Authentication token missing' };
+      }
+      
       const { data } = await axios.get(backendUrl + `/api/educator/course/${courseId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -288,6 +442,7 @@ export const AppContextProvider = (props) => {
         return { success: false, message: data.message };
       }
     } catch (error) {
+      console.error('Error getting course for editing:', error);
       toast.error(error.message);
       return { success: false, message: error.message };
     }
@@ -296,6 +451,11 @@ export const AppContextProvider = (props) => {
   // Update course
   const updateCourse = async (courseId, courseData, thumbnailFile) => {
     try {
+      if (!user) {
+        toast.error('User not logged in');
+        return { success: false, message: 'User not logged in' };
+      }
+      
       const formData = new FormData();
       formData.append('courseData', JSON.stringify(courseData));
       if (thumbnailFile) {
@@ -303,6 +463,11 @@ export const AppContextProvider = (props) => {
       }
 
       const token = await getToken();
+      if (!token) {
+        toast.error('Authentication token missing');
+        return { success: false, message: 'Authentication token missing' };
+      }
+      
       const { data } = await axios.put(backendUrl + `/api/educator/course/${courseId}`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -320,6 +485,7 @@ export const AppContextProvider = (props) => {
         return { success: false, message: data.message };
       }
     } catch (error) {
+      console.error('Error updating course:', error);
       toast.error(error.response?.data?.message || error.message || 'Failed to update course');
       return { success: false, message: error.message };
     }
@@ -328,7 +494,15 @@ export const AppContextProvider = (props) => {
   // Get enrolled students
   const fetchEnrolledStudents = async () => {
     try {
+      if (!user || !isEducator) {
+        return { success: false, message: 'Not authorized' };
+      }
+      
       const token = await getToken();
+      if (!token) {
+        return { success: false, message: 'Authentication token missing' };
+      }
+      
       const { data } = await axios.get(backendUrl + '/api/educator/enrolled-students', {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -340,6 +514,7 @@ export const AppContextProvider = (props) => {
         return { success: false, message: data.message };
       }
     } catch (error) {
+      console.error('Error fetching enrolled students:', error);
       toast.error(error.message);
       return { success: false, message: error.message };
     }
@@ -348,7 +523,15 @@ export const AppContextProvider = (props) => {
   // Get course analytics
   const fetchCourseAnalytics = async (courseId) => {
     try {
+      if (!user || !isEducator) {
+        return { success: false, message: 'Not authorized' };
+      }
+      
       const token = await getToken();
+      if (!token) {
+        return { success: false, message: 'Authentication token missing' };
+      }
+      
       const { data } = await axios.get(backendUrl + `/api/educator/course/${courseId}/analytics`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -360,6 +543,7 @@ export const AppContextProvider = (props) => {
         return { success: false, message: data.message };
       }
     } catch (error) {
+      console.error('Error fetching course analytics:', error);
       toast.error(error.message);
       return { success: false, message: error.message };
     }
@@ -367,8 +551,9 @@ export const AppContextProvider = (props) => {
 
   // Calculate course earnings
   const calculateCourseEarnings = (course) => {
+    // ADDED NULL CHECK
     if (!course || !course.enrolledStudents || !course.coursePrice) return 0;
-    const actualPrice = course.coursePrice - (course.discount * course.coursePrice / 100);
+    const actualPrice = course.coursePrice - ((course.discount || 0) * course.coursePrice / 100);
     return (course.enrolledStudents.length * actualPrice).toFixed(2);
   };
 
@@ -380,6 +565,10 @@ export const AppContextProvider = (props) => {
     if (user) {
       fetchUserData();
       fetchUserEnrolledCourses();
+    } else {
+      setUserData(null);
+      setEnrolledCourses([]);
+      setIsEducator(false);
     }
   }, [user]);
 
@@ -387,6 +576,9 @@ export const AppContextProvider = (props) => {
     if (isEducator && user) {
       fetchEducatorCourses();
       fetchEducatorDashboard();
+    } else {
+      setEducatorCourses([]);
+      setDashboardData(null);
     }
   }, [isEducator, user]);
 
